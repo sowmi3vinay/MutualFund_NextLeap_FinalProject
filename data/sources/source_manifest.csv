@@ -1,0 +1,35 @@
+source_id,url,title,source_type,scheme_name,topic,date_checked,is_official
+SRC001,https://www.hdfcfund.com/mutual-funds/fund-documents/kim,HDFC Mutual Fund KIM Documents,KIM Index,All HDFC schemes,KIM documents,2026-06-07,true
+SRC002,https://www.hdfcfund.com/mutual-funds/fund-documents/sid,HDFC Mutual Fund SID Documents,SID Index,All HDFC schemes,SID documents,2026-06-07,true
+SRC003,https://www.hdfcfund.com/mutual-funds/factsheets,HDFC Mutual Fund Factsheets,Factsheet Index,All HDFC schemes,factsheets,2026-06-07,true
+SRC004,https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio,HDFC Monthly Portfolio,Portfolio Index,All HDFC schemes,monthly portfolio,2026-06-07,true
+SRC005,https://files.hdfcfund.com/s3fs-public/KIM/2025-05/KIM%20-%20HDFC%20Flexi%20Cap%20Fund%20dated%20May%2030%2C%202025.pdf,HDFC Flexi Cap Fund KIM,KIM,HDFC Flexi Cap Fund,scheme facts,2026-06-07,true
+SRC006,https://files.hdfcfund.com/s3fs-public/SID/2024-11/SID%20-%20HDFC%20Flexi%20Cap%20Fund%20dated%20November%2021%2C%202024.pdf,HDFC Flexi Cap Fund SID,SID,HDFC Flexi Cap Fund,scheme facts,2026-06-07,true
+SRC007,https://files.hdfcfund.com/s3fs-public/Others/2025-07/Fund%20Facts%20-%20HDFC%20Flexi%20Cap%20Fund_June%2025.pdf,HDFC Flexi Cap Fund Factsheet,Fund Facts,HDFC Flexi Cap Fund,portfolio and risk,2026-06-07,true
+SRC008,https://www.hdfcfund.com/explore/mutual-funds/hdfc-elss-tax-saver/direct,HDFC ELSS Tax Saver Direct Page,Scheme Page,HDFC ELSS Tax Saver,scheme overview,2026-06-07,true
+SRC009,https://files.hdfcfund.com/s3fs-public/KIM/2024-06/KIM%20-%20HDFC%20ELSS%20Tax%20saver%20dated%20June%2028%2C%202024.pdf,HDFC ELSS Tax Saver KIM,KIM,HDFC ELSS Tax Saver,scheme facts,2026-06-07,true
+SRC010,https://files.hdfcfund.com/s3fs-public/SID/2024-06/SID%20-%20HDFC%20ELSS%20Tax%20saver%20dated%20June%2028%2C%202024.pdf,HDFC ELSS Tax Saver SID,SID,HDFC ELSS Tax Saver,scheme facts,2026-06-07,true
+SRC011,https://files.hdfcfund.com/s3fs-public/KIM/2025-05/KIM%20-%20HDFC%20Balanced%20Advantage%20Fund%20dated%20May%2030%2C%202025.pdf,HDFC Balanced Advantage Fund KIM,KIM,HDFC Balanced Advantage Fund,scheme facts,2026-06-07,true
+SRC012,https://files.hdfcfund.com/s3fs-public/SID/2024-11/SID%20-%20HDFC%20Balanced%20Advantage%20Fund%20dated%20November%2021%2C%202024.pdf,HDFC Balanced Advantage Fund SID,SID,HDFC Balanced Advantage Fund,scheme facts,2026-06-07,true
+SRC013,https://files.hdfcfund.com/s3fs-public/SID/2024-06/SID%20-%20HDFC%20Mid-Cap%20Opportunities%20Fund%20dated%20June%2028%2C%202024.pdf,HDFC Mid-Cap Opportunities Fund SID,SID,HDFC Mid-Cap Opportunities Fund,scheme facts,2026-06-07,true
+SRC014,https://files.hdfcfund.com/s3fs-public/Others/2025-07/Fund%20Facts%20-%20HDFC%20Mid-Cap%20Fund_July%2025.pdf,HDFC Mid-Cap Opportunities Fund Factsheet,Fund Facts,HDFC Mid-Cap Opportunities Fund,portfolio and risk,2026-06-07,true
+SRC015,https://www.amfiindia.com/investor/knowledge-center-info?zoneName=expenseRatio,AMFI Expense Ratio,AMFI,HDFC schemes,expense ratio,2026-06-07,true
+SRC016,https://www.amfiindia.com/research-information,AMFI Research Information,AMFI,HDFC schemes,industry data,2026-06-07,true
+SRC017,https://www.amfiindia.com/Themes/Theme1/downloads/circulars/SEBI/CU81-AMFI%20BP%20Circular%20No.%2061%20dt.%2014-Sep-15-Standardization%20of%20information%20in%20Factsheets.pdf,AMFI Factsheet Standardization Circular,AMFI,HDFC schemes,factsheet disclosures,2026-06-07,true
+SRC018,https://www.amfiindia.com/Themes/Theme1/downloads/circulars/SEBI/CU84-AMFI%20Best%20Practice%20Cir.%2064%20dt.%2029-Oct-15-Clarification%20of%20Cir%2061.pdf,AMFI Exit Load Clarification,AMFI,HDFC schemes,exit load,2026-06-07,true
+SRC019,https://investor.sebi.gov.in/Investor-charter.html,SEBI Investor Charter,SEBI,HDFC schemes,investor rights,2026-06-07,true
+SRC020,https://investor.sebi.gov.in/pdf/Investor_Charter_of_SEBI.PDF,SEBI Investor Charter PDF,SEBI,HDFC schemes,investor rights and charges,2026-06-07,true
+SRC021,https://www.sebi.gov.in/,SEBI Official Website,SEBI,HDFC schemes,regulatory reference,2026-06-07,true
+SRC022,https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListing=yes&sid=1&smid=0&ssid=3,SEBI Regulations Page,SEBI,HDFC schemes,mutual fund regulation,2026-06-07,true
+SRC023,https://kuvera.in/blog/what-is-an-exit-load/,Kuvera Exit Load Explainer,Kuvera,HDFC schemes,exit load,2026-06-07,true
+SRC024,https://kuvera.in/blog/taxation-of-mutual-funds/,Kuvera Taxation of Mutual Funds,Kuvera,HDFC schemes,capital gains tax,2026-06-07,true
+SRC025,https://kuvera.in/blog/tax-harvesting/,Kuvera Tax Harvesting,Kuvera,HDFC schemes,tax guidance,2026-06-07,true
+SRC026,https://kuvera.in/blog/why-fdi-matters-investment-opportunities-for-sip-investors/,Kuvera SIP Capital Gains Explainer,Kuvera,HDFC schemes,SIP capital gains,2026-06-07,true
+SRC027,https://www.hdfcfund.com/mutual-funds/fund-literature/leaflets,HDFC Fund Literature Leaflets,HDFC Fund Literature,All HDFC schemes,fund literature,2026-06-07,true
+SRC028,https://www.hdfcfund.com/statutory-disclosure/portfolio/fortnightly-portfolio,HDFC Fortnightly Portfolio,Portfolio Index,All HDFC schemes,portfolio disclosure,2026-06-07,true
+SRC029,https://files.hdfcfund.com/s3fs-public/KIM/2024-11/KIM%20-%20HDFC%20Mid-Cap%20Opportunities%20Fund%20dated%20November%2021%2C%202024.pdf,HDFC Mid-Cap Opportunities Fund KIM,KIM,HDFC Mid-Cap Opportunities Fund,scheme facts,2026-06-07,true
+SRC030,https://files.hdfcfund.com/s3fs-public/Others/2025-10/Fund%20Facts%20-%20HDFC%20Balanced%20Advantage%20Fund_October%2025.pdf,HDFC Balanced Advantage Fund Factsheet,Fund Facts,HDFC Balanced Advantage Fund,portfolio and risk,2026-06-07,true
+SRC031,https://www.hdfcfund.com/statutory-disclosure,HDFC Statutory Disclosures,Statutory Disclosure,All HDFC schemes,disclosures and investor documents,2026-06-07,true
+SRC032,https://www.hdfcfund.com/statutory-disclosure/annual-reports,HDFC Annual Reports,Annual Report,All HDFC schemes,annual scheme reports,2026-06-07,true
+SRC033,https://www.hdfcfund.com/services,HDFC Investor Services,Investor Services,All HDFC schemes,statements forms and support,2026-06-07,true
+GEN001,data/outputs/fee_explainer.md,Review-Derived Fee Explainer,Generated Review Intelligence,HDFC schemes,Exit Load,2026-06-21,false

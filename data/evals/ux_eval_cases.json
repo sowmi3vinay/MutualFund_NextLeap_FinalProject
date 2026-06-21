@@ -1,0 +1,22 @@
+[
+  {
+    "id": "UX001",
+    "component": "weekly_pulse",
+    "checks": ["max_250_words", "exactly_3_action_ideas", "contains_quote"]
+  },
+  {
+    "id": "UX002",
+    "component": "fee_explainer",
+    "checks": ["exactly_6_bullets", "two_links", "last_checked_date"]
+  },
+  {
+    "id": "UX003",
+    "component": "voice_scheduler",
+    "checks": ["greeting_contains_top_theme", "booking_code_generated"]
+  },
+  {
+    "id": "UX004",
+    "component": "mcp_approval",
+    "checks": ["calendar_action_exists", "notes_action_exists", "email_action_exists"]
+  }
+]

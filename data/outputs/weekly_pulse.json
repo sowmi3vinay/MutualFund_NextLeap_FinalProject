@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-06-21",
+  "review_count": 40,
+  "top_theme": "Exit Load Confusion",
+  "top_themes": [
+    "Exit Load Confusion",
+    "SIP Mandate Issues",
+    "App Navigation",
+    "Expense Ratio / Fee Clarity",
+    "Capital Gains Statement Access"
+  ],
+  "theme_counts": {
+    "Exit Load Confusion": 14,
+    "SIP Mandate Issues": 10,
+    "App Navigation": 8,
+    "Expense Ratio / Fee Clarity": 7,
+    "Capital Gains Statement Access": 6
+  },
+  "representative_quotes": [
+    "Redemption charges were confusing.",
+    "I do not understand why exit load was charged when I redeemed my units."
+  ],
+  "key_observation": "Exit Load Confusion is the leading theme with 14 matching reviews.",
+  "actions": [
+    "Show exit-load rules before redemption confirmation.",
+    "Add a short exit-load example beside the redemption form.",
+    "Create an advisor briefing tag for exit-load questions."
+  ],
+  "weekly_pulse": "Top themes: Exit Load Confusion, SIP Mandate Issues, App Navigation, Expense Ratio / Fee Clarity, Capital Gains Statement Access.\nTheme counts: {'Exit Load Confusion': 14, 'SIP Mandate Issues': 10, 'App Navigation': 8, 'Expense Ratio / Fee Clarity': 7, 'Capital Gains Statement Access': 6}.\nRepresentative quote: \"Redemption charges were confusing.\"\nKey observation: Exit Load Confusion is the leading theme with 14 matching reviews.\nAction ideas: 1. Show exit-load rules before redemption confirmation. 2. Add a short exit-load example beside the redemption form. 3. Create an advisor briefing tag for exit-load questions.",
+  "fee_topic": "Exit Load"
+}

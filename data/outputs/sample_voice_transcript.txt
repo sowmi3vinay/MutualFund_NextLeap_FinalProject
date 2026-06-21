@@ -1,0 +1,35 @@
+Assistant:
+Welcome to the Mutual Fund Support Assistant.
+
+One of the most common support topics this week has been exit load confusion.
+
+How can I help you today?
+
+Customer:
+I want to book a call about my SIP mandate.
+
+Assistant:
+I can help with that. I have booked a mock advisor slot for Friday 3:00 PM.
+Your booking code is KV-B391.
+I created pending approval actions for a calendar hold, notes entry, and advisor email draft.
+
+Operations Console:
+Calendar Hold, Notes Entry, and Email Draft appear as pending actions in the Approval Centre.
+
+Operations User:
+Approve Calendar Hold.
+
+System:
+Tentative advisor hold created.
+
+Operations User:
+Approve Notes Entry.
+
+System:
+Notes updated.
+
+Operations User:
+Approve Email Draft.
+
+System:
+Advisor draft created. Email was not auto-sent.

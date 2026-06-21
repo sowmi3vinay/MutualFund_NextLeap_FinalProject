@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+chromadb
+requests
+beautifulsoup4
+pypdf
+sentence-transformers
+groq
+supabase
+psycopg2-binary

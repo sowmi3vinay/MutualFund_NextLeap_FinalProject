@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+.pycache/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+.cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+.vite/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local data and generated stores
+data/vector_store/
+data/sources/processed/vector_store/
+*.sqlite
+*.sqlite3
+*.db
+
+# Notebook checkpoints
+.ipynb_checkpoints/

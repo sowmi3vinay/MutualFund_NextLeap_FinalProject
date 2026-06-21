@@ -1,0 +1,32 @@
+[
+  {
+    "id": "GQ001",
+    "question": "What is the exit load for HDFC Flexi Cap Fund?",
+    "expected_terms": ["exit load", "hdfc flexi cap"],
+    "expected_topics": ["exit load", "scheme facts"]
+  },
+  {
+    "id": "GQ002",
+    "question": "What is an expense ratio in a mutual fund?",
+    "expected_terms": ["expense ratio", "expenses"],
+    "expected_topics": ["expense ratio"]
+  },
+  {
+    "id": "GQ003",
+    "question": "Where can I find the riskometer for HDFC Balanced Advantage Fund?",
+    "expected_terms": ["riskometer", "balanced advantage"],
+    "expected_topics": ["portfolio and risk", "scheme facts"]
+  },
+  {
+    "id": "GQ004",
+    "question": "What benchmark is used for HDFC Mid-Cap Opportunities Fund?",
+    "expected_terms": ["benchmark", "mid-cap"],
+    "expected_topics": ["portfolio and risk", "scheme facts"]
+  },
+  {
+    "id": "GQ005",
+    "question": "What documents explain minimum SIP amounts for HDFC funds?",
+    "expected_terms": ["sip", "minimum"],
+    "expected_topics": ["kim documents", "scheme facts"]
+  }
+]
