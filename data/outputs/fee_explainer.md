@@ -11,4 +11,4 @@ Official sources:
 1. https://www.amfiindia.com/investor/knowledge-center-info?zoneName=expenseRatio
 2. https://investor.sebi.gov.in/Investor-charter.html
 
-Last checked: 2026-06-21
+Last checked: 2026-06-28

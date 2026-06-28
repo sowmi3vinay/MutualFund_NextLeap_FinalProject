@@ -63,11 +63,36 @@ def generate_grounded_answer(question, context):
     if not answer:
         return INSUFFICIENT_CONTEXT_ANSWER
     if INSUFFICIENT_CONTEXT_ANSWER.lower() in answer.lower():
+        extractive_answer = generate_extractive_answer(question, context)
+        if extractive_answer != INSUFFICIENT_CONTEXT_ANSWER:
+            return extractive_answer
         return INSUFFICIENT_CONTEXT_ANSWER
     return limit_to_three_sentences(answer)
 
 
 def generate_extractive_answer(question, context):
+    lowered_question = question.lower()
+    flattened_context = " ".join(context.split())
+
+    if "riskometer" in lowered_question or re.search(r"\brisk\b", lowered_question):
+        for risk_level in [
+            "very high",
+            "moderately high",
+            "low to moderate",
+            "moderate",
+            "low",
+        ]:
+            if risk_level in flattened_context.lower():
+                return f"The scheme riskometer for this fund is {risk_level.title()}."
+        risk_match = re.search(
+            r"(?:scheme\s+riskometer[#:\s-]*|riskometer[#:\s-]*)(very high|moderately high|moderate|low to moderate|low)",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if risk_match:
+            risk_level = risk_match.group(1).title()
+            return f"The scheme riskometer for this fund is {risk_level}."
+
     query_terms = {
         term
         for term in re.findall(r"[a-z0-9]+", question.lower())

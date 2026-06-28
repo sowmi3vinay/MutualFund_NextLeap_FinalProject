@@ -1,4 +1,5 @@
 import os
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ EMBEDDING_DIMENSIONS = 384
 DEFAULT_EMBEDDING_BATCH_SIZE = 32
 
 _MODEL = None
+_MODEL_LOCK = threading.RLock()
 
 
 def _load_environment():
@@ -20,12 +22,32 @@ def _load_environment():
 def get_embedding_model():
     global _MODEL
     _load_environment()
-    if _MODEL is None:
-        local_files_only = os.getenv("EMBEDDING_LOCAL_FILES_ONLY", "true").lower() == "true"
-        if local_files_only:
-            os.environ.setdefault("HF_HUB_OFFLINE", "1")
-            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-        _MODEL = SentenceTransformer(EMBEDDING_MODEL, local_files_only=local_files_only)
+    with _MODEL_LOCK:
+        if _MODEL is None:
+            local_files_only = os.getenv("EMBEDDING_LOCAL_FILES_ONLY", "true").lower() == "true"
+            if local_files_only:
+                os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+            load_attempts = [
+                {"local_files_only": local_files_only},
+                {
+                    "local_files_only": local_files_only,
+                    "device": "cpu",
+                    "model_kwargs": {"low_cpu_mem_usage": False},
+                },
+            ]
+            last_error = None
+            for kwargs in load_attempts:
+                try:
+                    _MODEL = SentenceTransformer(EMBEDDING_MODEL, **kwargs)
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    _MODEL = None
+
+            if _MODEL is None and last_error is not None:
+                raise last_error
     return _MODEL
 
 

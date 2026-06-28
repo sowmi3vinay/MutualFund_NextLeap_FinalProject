@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-14T09:14:50Z",
+  "generated_at": "2026-06-21T17:04:16Z",
   "rag_eval": {
     "name": "Retrieval Accuracy",
     "status": "PASS",
@@ -83,6 +83,7 @@
           "balanced advantage"
         ],
         "matched_topics": [
+          "portfolio and risk",
           "scheme facts"
         ],
         "top_sources": [

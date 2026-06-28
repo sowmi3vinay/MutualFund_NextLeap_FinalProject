@@ -2,679 +2,361 @@
 
 ## Overview
 
-The Mutual Fund Advisor Intelligence Suite is a voice-first GenAI application that combines:
+The Mutual Fund Advisor Intelligence Suite is a multi-surface support system built around four visible dashboard surfaces and one shared backend architecture:
 
-1. FAQ Chatbot (Facts-Only RAG)
-2. Review Intelligence
-3. Voice Appointment Scheduler
+- Customer FAQ
+- Weekly Product Pulse
+- Advisor Voice Scheduler
+- Operations Approval Centre
 
-These capabilities are connected through a shared orchestration layer and an approval-gated MCP workflow.
+The architecture is intentionally human-in-the-loop. The scheduler can prepare actions, but external tool execution remains gated by approval.
 
-The system is designed around five evaluation areas:
-
-* Voice UX & Intent
-* MCP & System Design
-* Grounding & RAG
-* AI Evaluations
-* Automation, Code & Deploy
-
----
-
-# System Architecture
+## Current System View
 
 ```text
 User
  │
  ▼
-Dashboard UI
+React + Vite Dashboard
  │
- ├──────────── FAQ View
- │
- ├──────────── Weekly Pulse View
- │
- ├──────────── Voice Scheduler View
- │
- └──────────── Approval Centre
-                  │
-                  ▼
-            MCP Orchestrator
-                  │
- ┌────────────────┼────────────────┐
- │                │                │
- ▼                ▼                ▼
-Notes Tool   Calendar Tool   Email Draft Tool
+ ├──────── FAQ View
+ ├──────── Weekly Pulse View
+ ├──────── Voice Scheduler View
+ └──────── Approval Centre
+          │
+          ▼
+     FastAPI Backend
+          │
+ ┌────────┼───────────────┬─────────────────────┐
+ │        │               │                     │
+ ▼        ▼               ▼                     ▼
+FAQ     Review      Voice Scheduler      MCP Orchestrator
+RAG     Intelligence    Logic                  │
+ │        │               │                    │
+ ▼        ▼               ▼                    ▼
+Vector   Pulse +      Booking Store      Approval Actions
+Store    Fee Output   + Advisor Logic          │
+                                              ▼
+                                 Calendar / Notes / Email Tools
 ```
 
----
+## Frontend Architecture
 
-# Component Architecture
+Frontend lives in `apps/web`.
 
-## 1. FAQ Chatbot (Grounding & RAG)
+Current UI structure:
+
+- left sidebar navigation
+- four operational surfaces instead of top tabs
+- local browser thread persistence for FAQ
+- Vapi-powered voice interaction in Scheduler view
+
+Primary frontend files:
+
+- `apps/web/src/App.jsx`
+- `apps/web/src/views/FAQView.jsx`
+- `apps/web/src/views/PulseView.jsx`
+- `apps/web/src/views/SchedulerView.jsx`
+- `apps/web/src/views/ApprovalCentre.jsx`
+
+## Backend Architecture
+
+Backend lives in `apps/api`.
+
+Key routes:
+
+```text
+POST /faq/ask
+GET  /faq/retrieve-test
+POST /pulse/generate
+GET  /scheduler/greeting
+POST /scheduler/voice-turn
+GET  /approvals/pending
+POST /approvals/{approval_id}/approve
+POST /approvals/{approval_id}/reject
+```
+
+Core backend services:
+
+- `rag_service.py`
+- `faq_memory.py`
+- `review_intelligence.py`
+- `voice_scheduler.py`
+- `advisor_scheduler.py`
+- `mcp_orchestrator.py`
+- `eval_runner.py`
+
+## FAQ Architecture
 
 Purpose:
 
-Provide factual mutual fund information using verified public sources.
-
-Supported Topics:
-
-* Exit Load
-* Expense Ratio
-* Benchmark
-* Lock-in Period
-* Riskometer
-* SIP Minimum Amount
-* Capital Gains Statement Guidance
-
-Data Sources:
-
-* AMC Factsheets
-* KIM Documents
-* SID Documents
-* AMFI Resources
-* SEBI Resources
-* Kuvera Help Pages
-
-Vector storage decision:
-
-```text
-Development fallback: local sentence-transformer embeddings + local ChromaDB
-Deployment: local sentence-transformer embeddings + Supabase pgvector
-```
-
-The retrieval layer keeps embedding and vector-store access isolated so ChromaDB can be used locally and Supabase pgvector can be used in deployment without changing the FAQ route or UI.
-
-The local embedding service loads `sentence-transformers/all-MiniLM-L6-v2`. Normal runs use cached model files; first-time setup can allow download by setting `EMBEDDING_LOCAL_FILES_ONLY=false`.
-
-FAQ answer generation uses Groq `llama-3.3-70b-versatile` when `GROQ_API_KEY` is configured. If Groq is unavailable, the backend uses a context-only extractive fallback so the FAQ endpoint remains grounded in retrieved chunks.
-
-### Vector Store Migration
-
-Local ChromaDB was used for development. Supabase Postgres with pgvector is now the deployment vector backend. The RAG service still calls the same retrieval interface; only the storage adapter changes through `VECTOR_BACKEND`.
-
-```text
-VECTOR_BACKEND=supabase -> Supabase pgvector document_chunks table
-VECTOR_BACKEND=chroma   -> local ChromaDB fallback under data/vector_store
-```
-
-Both backends use `sentence-transformers/all-MiniLM-L6-v2`, which produces 384-dimensional embeddings. Supabase stores those embeddings in `document_chunks.embedding vector(384)` and exposes retrieval through the `match_document_chunks` RPC.
+- provide facts-only mutual fund answers grounded in retrieved source chunks
 
 Pipeline:
 
 ```text
-User Question
-      │
-      ▼
-Query Classifier
-      │
-      ▼
-Retriever
-      │
-      ▼
-Relevant Chunks
-      │
-      ▼
-LLM Answer Generator
-      │
-      ▼
-Citation Formatter
-      │
-      ▼
-Response
+Question
+   ↓
+Compliance / advice guardrails
+   ↓
+FAQ memory contextualization
+   ↓
+Embedding generation
+   ↓
+Vector retrieval + keyword hybrid retrieval
+   ↓
+Grounded answer generation
+   ↓
+Citation formatting
 ```
 
-Rules:
+Current implementation details:
 
-* Citation required
-* Maximum 3 sentences
-* No performance claims
-* No investment advice
-* No hallucinated facts
+- follow-up memory keyed by `session_id` and `thread_id`
+- explicit scheme detection prevents memory from overwriting new scheme questions
+- advice requests are refused and redirected to AMFI education
+- answer generation uses Groq when available and extractive fallback otherwise
 
----
+Relevant files:
 
-## 2. Review Intelligence
+- `apps/api/routes/faq.py`
+- `apps/api/services/faq_memory.py`
+- `apps/api/services/rag_service.py`
+- `apps/api/services/llm_service.py`
+- `apps/api/services/compliance_guardrails.py`
+
+## Vector Store Architecture
+
+Embeddings:
+
+- `sentence-transformers/all-MiniLM-L6-v2`
+- 384 dimensions
+
+Backend selection:
+
+```text
+VECTOR_BACKEND=supabase -> deployment backend
+VECTOR_BACKEND=chroma   -> local fallback backend
+```
+
+Current design goal:
+
+- retrieval interface remains stable
+- storage backend can swap without changing FAQ API or frontend
+
+Supabase path:
+
+- `document_chunks` table
+- `match_document_chunks` RPC
+- `supabase/migrations/001_create_document_chunks.sql`
+
+Local fallback path:
+
+- ChromaDB under `data/vector_store/`
+
+## Review Intelligence Architecture
 
 Purpose:
 
-Convert customer reviews into actionable product insights.
-
-Input:
-
-```text
-reviews.csv
-```
-
-Fields:
-
-```text
-review_id
-date
-rating
-channel
-review_text
-```
+- convert support review CSV data into actionable product insights
+- feed fee confusion back into the FAQ corpus
 
 Pipeline:
 
 ```text
 Reviews CSV
-      │
-      ▼
-Review Cleaner
-      │
-      ▼
-Theme Detection
-      │
-      ▼
-Quote Extraction
-      │
-      ▼
+   ↓
+Cleaning + theme detection
+   ↓
 Weekly Product Pulse
-      │
-      ▼
+   ↓
 Fee Explainer
+   ↓
+Output files
+   ↓
+Optional vector refresh feedback loop
 ```
 
 Outputs:
 
-### Weekly Product Pulse
+- `data/outputs/weekly_pulse.json`
+- `data/outputs/fee_explainer.md`
 
-Contains:
+Important current behavior:
 
-* Top themes
-* User quotes
-* Key observation
-* Exactly 3 action ideas
+- UI pulse generation does not force a full vector refresh by default
+- backend still supports refresh when explicitly requested
 
-Maximum:
+Relevant files:
 
-```text
-250 words
-```
+- `apps/api/routes/pulse.py`
+- `apps/api/services/review_intelligence.py`
 
-### Fee Explainer
-
-Contains:
-
-* Exactly 6 bullets
-* Plain-language explanation
-* 2 official sources
-* Last checked timestamp
-
-
-
-## 3. Voice Scheduler
+## Voice Scheduler Architecture
 
 Purpose:
 
-Allow users to schedule advisor calls through voice.
+- handle advisor booking flow through voice without bypassing backend logic
 
-Supported Intents:
-
-* Book appointment
-* Reschedule appointment
-* Call preparation guidance
-
-Pipeline:
+Current voice transport flow:
 
 ```text
 User speech
-      │
-      ▼
+   ↓
 Vapi Web SDK
-      │
-      ├── Vapi STT
-      │
-      ▼
+   ↓
+Final transcript in browser
+   ↓
 POST /scheduler/voice-turn
-      │
-      ▼
-Intent Detection
-      │
-      ▼
-Slot Selection
-      │
-      ▼
-Booking Code Generation
-      │
-      ▼
-Pending MCP Actions
-      │
-      ▼
-Scheduler Reply
-      │
-      ▼
+   ↓
+Intent detection + slot selection + booking code generation
+   ↓
+Pending MCP actions
+   ↓
+Backend reply
+   ↓
 Vapi TTS
 ```
 
-Example:
+Important rule:
 
-```text
-User:
-I want to book a call about my SIP mandate.
+- Vapi is transport-only
+- Vapi must not reason about scheduling itself
+- Vapi must not generate bookings, times, or actions
 
-Assistant:
-Many users are asking about exit load confusion this week.
-I can help book a slot for your SIP mandate question.
-```
+Current scheduler behavior:
 
-The greeting dynamically uses the current Weekly Pulse top theme.
+- detects booking / reschedule / preparation intents
+- deflects PII
+- supports date-aware scheduling:
+  - weekdays
+  - explicit dates
+  - `today`
+  - `tomorrow`
+  - `day after tomorrow`
+  - `in 3 days`
+  - `next 3 days`
+- assigns sample advisor from roster
+- blocks same-advisor same-slot conflicts
+- generates booking codes
+- creates pending MCP actions only
 
-Vapi is only the voice transport layer. The frontend listens for final user transcripts from Vapi, forwards the transcript to the existing scheduler endpoint, displays the backend response, and asks Vapi to speak that response. The scheduler endpoint remains the single place where intent detection, PII deflection, booking-code generation, and MCP pending action creation happen.
+Current advisor allocation layer:
 
-## How the Three Pillars Work Together
+- Asha Mehta
+- Rohan Iyer
+- Neha Kapoor
 
-The three pillars are designed as a connected support workflow rather than independent features.
+Persistence:
 
-### Step 1: Review Intelligence Identifies User Confusion
+- local booking store: `data/outputs/advisor_bookings.json`
 
-Customer reviews are analyzed to generate:
+Frontend voice UX note:
 
-* Weekly Product Pulse
-* Top Themes
-* Fee Explainer
+- a latency-based filler line, `Let me check that.`, may be spoken if backend response is delayed
+- filler is frontend-controlled, not Vapi-authored
 
-Example:
+Relevant files:
 
-```text
-Top Theme: Exit Load Confusion
-```
+- `apps/api/services/voice_scheduler.py`
+- `apps/api/services/advisor_scheduler.py`
+- `apps/web/src/views/SchedulerView.jsx`
 
-### Step 2: FAQ Chatbot Learns From Review Insights
-
-The generated Fee Explainer is added back into the RAG corpus.
-
-Flow:
-
-```text
-Reviews
-    ↓
-Fee Explainer Generated
-    ↓
-Added To Vector Store
-    ↓
-FAQ Retrieval Improved
-```
-
-As a result, future FAQ responses can answer common fee-related questions more effectively.
-
-### Step 3: Voice Scheduler Uses Review Context
-
-The current Weekly Pulse Top Theme is used in the Voice Scheduler greeting.
-
-Example:
-
-Welcome to the Mutual Fund Support Assistant.
-
-One of the most common support topics this week has been exit-load related questions.
-
-How can I help you today?
-```
-
-This provides context-aware support without changing the booking workflow.
-
-### Step 4: Advisor Receives Context
-
-When a booking is created:
-
-```text
-Customer
-      ↓
-Voice Scheduler
-      ↓
-Booking Code
-      ↓
-MCP Orchestrator
-      ↓
-Approval Centre (Operations Console)
-      ↓
-Approve / Reject
-      ↓
-Calendar Tool
-Notes Tool
-Email Draft Tool
-```
-
-After a booking is created, the system generates three pending MCP actions. These actions appear in the Approval Centre, which represents an advisor operations console. An operations user reviews and approves the actions before the underlying tools execute.
-
-The advisor email draft includes:
-
-* Booking topic
-* Weekly Pulse summary
-* Current Top Theme
-
-This helps the advisor prepare before the conversation.
-
-### End-to-End Flow
-
-```text
-Reviews
-   ↓
-Review Intelligence
-   ↓
-Weekly Pulse + Fee Explainer
-   ↓
-─────────────────────────
-↓                       ↓
-FAQ Chatbot        Voice Scheduler
-↓                       ↓
-Better Answers     Context-Aware Greeting
-↓                       ↓
-                Booking Code
-                       ↓
-                MCP Orchestrator
-                       ↓
-       Approval Centre (Operations Console)
-                       ↓
-              Approve / Reject
-                       ↓
-       Calendar Tool / Notes Tool / Email Draft Tool
-```
-
-This creates a feedback loop between customer questions, customer feedback, and advisor interactions.
-
-
----
-
-# Feedback Loop Into RAG
-
-One of the key architecture requirements is that Review Intelligence improves FAQ quality.
-
-Process:
-
-```text
-Reviews
-   │
-   ▼
-Fee Explainer Generated
-   │
-   ▼
-Fee Explainer Saved
-   │
-   ▼
-Corpus Refresh
-   │
-   ▼
-Vector Store Updated
-   │
-   ▼
-FAQ Can Retrieve New Content
-```
-
-This allows common customer confusion to become retrievable knowledge.
-
----
-
-# Booking Code Generation
-
-Format:
-
-```text
-KV-B391
-```
-
-Rules:
-
-* Unique per booking
-* Displayed in UI
-* Read aloud
-* Stored in MCP actions
-
----
-
-# PII Protection
-
-The scheduler must never store:
-
-* PAN
-* Aadhaar
-* Phone numbers
-* Email addresses
-* Folio numbers
-* Bank details
-
-Example:
-
-```text
-User:
-My PAN is XXXXX1234X
-
-Assistant:
-Please do not share personal details on this call.
-Please use the secure support channel instead.
-```
-
----
-
-# MCP Architecture
-
-## Design Principle
-
-The Voice Scheduler never executes external actions directly.
+## Approval-Gated MCP Architecture
 
 Required flow:
 
 ```text
 Customer
-      │
-      ▼
+   ↓
 Voice Scheduler
-      │
-      ▼
+   ↓
 Booking Code
-      │
-      ▼
+   ↓
 MCP Orchestrator
-      │
-      ▼
-Approval Centre (Operations Console)
-      │
-      ▼
+   ↓
+Approval Centre
+   ↓
 Approve / Reject
-      │
-      ▼
+   ↓
 Calendar Tool / Notes Tool / Email Draft Tool
 ```
 
-The Approval Centre represents an advisor operations console. An operations user reviews each pending action and either approves it for execution or rejects it before any tool runs.
+Current MCP design:
 
----
+- scheduler creates pending actions
+- approval centre surfaces those actions
+- approved actions execute mock tools
+- rejected actions remain rejected and do not run
 
-## MCP Orchestrator
+Tool behavior today:
 
-Purpose:
+- Calendar Hold: mock hold / calendar-link style behavior
+- Notes Entry: can append approved booking records to Google Sheets
+- Email Draft: draft-only, never auto-send
 
-Create and manage pending actions.
+Relevant files:
 
-Responsibilities:
+- `apps/api/routes/approvals.py`
+- `apps/api/services/mcp_orchestrator.py`
+- `apps/api/mcp_tools/calendar_hold_tool.py`
+- `apps/api/mcp_tools/doc_append_tool.py`
+- `apps/api/mcp_tools/email_draft_tool.py`
 
-* Generate action payloads
-* Track status
-* Route approvals
-* Log executions
+## Google Sheets Logging
 
-Statuses:
+Current behavior:
 
-```text
-pending
-approved
-rejected
-completed
-failed
-```
+- booking details can be appended to a Google Sheet after approval
+- intended for operations visibility and demo persistence
 
----
+Preferred deployment credential mode:
 
-## MCP Tool 1: Notes / Doc Append
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
 
-Input:
+Local fallback:
 
-```json
-{
-  "booking_code": "KV-B391",
-  "top_theme": "exit load confusion"
-}
-```
+- `GOOGLE_SERVICE_ACCOUNT_FILE`
 
-Output:
+Current sheet usage is approval-time logging, not scheduler-direct logging, which preserves architecture boundaries.
 
-```text
-Shared document updated
-```
+## Deployment Architecture
 
----
+Recommended hosted split:
 
-## MCP Tool 2: Calendar Hold Creator
+- Frontend: Vercel / Netlify / static hosting
+- Backend: Render / Railway / Fly.io / Python web host
+- Vector store: Supabase pgvector
 
-Input:
+Production env responsibilities:
 
-```json
-{
-  "slot": "Friday 3 PM",
-  "booking_code": "KV-B391"
-}
-```
+- frontend:
+  - `VITE_API_BASE_URL`
+  - `VITE_VAPI_PUBLIC_KEY`
+  - `VITE_VAPI_ASSISTANT_ID`
+- backend:
+  - `GROQ_API_KEY`
+  - `VECTOR_BACKEND=supabase`
+  - `SUPABASE_*`
+  - `GOOGLE_*`
+  - `CORS_ORIGINS`
 
-Output:
+## Current Readiness Summary
 
-```text
-Tentative calendar hold created
-```
+Implemented:
 
-Stage 1:
+- FAQ
+- review intelligence
+- Vapi scheduler
+- advisor assignment
+- approval centre
+- Google Sheets logging
+- Supabase vector adapter
+- eval framework
 
-```text
-Mock calendar slots
-```
+Pending before final hosted submission:
 
-Future:
-
-```text
-Google Calendar MCP
-```
-
----
-
-## MCP Tool 3: Email Draft Generator
-
-Input:
-
-```json
-{
-  "booking_code": "KV-B391",
-  "pulse_snippet": "Exit load confusion"
-}
-```
-
-Output:
-
-```text
-Draft advisor email
-```
-
-Rules:
-
-* Draft only
-* Never auto-send
-
----
-
-# Data Storage
-
-## Vector Store
-
-Stores:
-
-* AMC documents
-* KIM
-* SID
-* AMFI resources
-* SEBI resources
-* Fee Explainer documents
-
-Suggested:
-
-```text
-ChromaDB
-```
-
----
-
-## Relational Storage
-
-Stores:
-
-* Reviews
-* Weekly Pulse
-* Booking records
-* MCP actions
-* Evaluation results
-
-Suggested:
-
-```text
-SQLite (development)
-Postgres (deployment)
-```
-
----
-
-# Evaluation Architecture
-
-Three evaluation layers are implemented.
-
-## Retrieval Accuracy
-
-Checks:
-
-* Faithfulness
-* Relevance
-* Citation Accuracy
-
----
-
-## Compliance & Safety
-
-Checks:
-
-* Investment advice refusal
-* PII protection
-* Hallucination prevention
-
----
-
-## UX & Structure
-
-Checks:
-
-* Weekly Pulse formatting
-* Fee Explainer formatting
-* Voice greeting behavior
-* Booking code generation
-* MCP action creation
-
----
-
-# Deployment Architecture
-
-Frontend:
-
-```text
-React + Vite
-```
-
-Backend:
-
-```text
-FastAPI
-```
-
-Suggested Deployment:
-
-```text
-Frontend → Vercel
-
-Backend → Render
-```
-
-The application is exposed through a single dashboard entry point with all three pillars accessible from one interface.
+- production deployment
+- Supabase production ingest validation
+- final public URL
+- final demo recording

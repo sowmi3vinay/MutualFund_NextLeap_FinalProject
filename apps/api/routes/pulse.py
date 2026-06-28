@@ -12,8 +12,12 @@ class PulseRequest(BaseModel):
     reviews_csv_path: Optional[str] = "data/reviews/sample_reviews.csv"
     week_start: Optional[str] = None
     week_end: Optional[str] = None
+    refresh_vectors: Optional[bool] = False
 
 
 @router.post("/generate")
 def generate_pulse(request: PulseRequest):
-    return generate_review_intelligence(request.reviews_csv_path)
+    return generate_review_intelligence(
+        request.reviews_csv_path,
+        refresh_vectors=bool(request.refresh_vectors),
+    )

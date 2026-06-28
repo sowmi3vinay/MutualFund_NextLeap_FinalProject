@@ -4,6 +4,7 @@ import re
 from urllib.parse import urlparse
 
 from services.embedding_service import embed_query
+from services.faq_memory import detect_scheme, detect_topic
 from services.llm_service import INSUFFICIENT_CONTEXT_ANSWER, generate_grounded_answer
 from services.vector_store import get_vector_store
 
@@ -27,6 +28,11 @@ GENERIC_QUERY_TERMS = {
     "question",
     "tell",
     "about",
+    "topic",
+    "context",
+    "current",
+    "latest",
+    "its",
 }
 
 
@@ -69,6 +75,12 @@ def _rerank_chunks(query, chunks):
         topic_score = sum(0.15 for term in terms if term in topic)
         text_score = sum(0.03 for term in terms if term in text)
         phrase_score = sum(1.0 for phrase in phrase_boosts if phrase in text or phrase in title)
+        exact_exit_load_score = (
+            3.0
+            if "exit load" in query_lower
+            and re.search(r"exit\s+load\s*:?\s*nil", text)
+            else 0
+        )
         generated_fee_score = (
             2.0
             if source_id.startswith("gen")
@@ -76,7 +88,15 @@ def _rerank_chunks(query, chunks):
             and any(term in {"exit", "load", "fee", "fees", "charged", "charges"} for term in terms)
             else 0
         )
-        return base_score + metadata_score + topic_score + text_score + phrase_score + generated_fee_score
+        return (
+            base_score
+            + metadata_score
+            + topic_score
+            + text_score
+            + phrase_score
+            + exact_exit_load_score
+            + generated_fee_score
+        )
 
     return sorted(chunks, key=score, reverse=True)
 
@@ -156,6 +176,31 @@ def _dedupe_chunks(chunks):
     return deduped
 
 
+def _chunk_matches_scheme(chunk, scheme_name):
+    if not scheme_name:
+        return True
+    haystack = " ".join(
+        [
+            chunk.get("scheme_name") or "",
+            chunk.get("title") or "",
+        ]
+    ).lower()
+    return scheme_name.lower() in haystack
+
+
+def _chunk_matches_topic(chunk, topic_name):
+    if not topic_name:
+        return True
+    haystack = " ".join(
+        [
+            chunk.get("topic") or "",
+            chunk.get("title") or "",
+            chunk.get("text") or "",
+        ]
+    ).lower()
+    return topic_name.lower() in haystack
+
+
 def retrieve_relevant_chunks(query, top_k=5):
     vector_store = get_vector_store()
     if vector_store.count() == 0:
@@ -165,7 +210,24 @@ def retrieve_relevant_chunks(query, top_k=5):
     candidate_count = max(top_k, min(max(top_k * 10, 50), vector_store.count()))
     chunks = vector_store.search(query_embedding, top_k=candidate_count)
     hybrid_chunks = _dedupe_chunks(chunks + _keyword_chunks(query))
-    return _rerank_chunks(query, hybrid_chunks)[:top_k]
+    reranked_chunks = _rerank_chunks(query, hybrid_chunks)
+
+    detected_scheme = detect_scheme(query)
+    detected_topic = detect_topic(query)
+
+    if detected_scheme:
+        scheme_chunks = [chunk for chunk in reranked_chunks if _chunk_matches_scheme(chunk, detected_scheme)]
+        if scheme_chunks:
+            reranked_chunks = scheme_chunks
+        else:
+            return []
+
+    if detected_topic:
+        topic_chunks = [chunk for chunk in reranked_chunks if _chunk_matches_topic(chunk, detected_topic)]
+        if topic_chunks:
+            reranked_chunks = topic_chunks
+
+    return reranked_chunks[:top_k]
 
 
 def build_context(chunks):
@@ -215,6 +277,8 @@ def citations_from_chunks(chunks):
 def has_low_retrieval_confidence(chunks):
     if not chunks:
         return True
+    if any((chunk.get("similarity") or 0) >= 0.72 for chunk in chunks[:3]):
+        return False
     first_distance = chunks[0].get("distance")
     return first_distance is None or first_distance > LOW_CONFIDENCE_DISTANCE
 

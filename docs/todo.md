@@ -33,9 +33,9 @@ This list tracks work from Phase 2 onward. Prioritize current-phase tasks first,
 
 ## Later Deployment Todo — Supabase pgvector
 
-- [ ] Create a Supabase project for deployed vector storage.
+- [x] Create a Supabase project for deployed vector storage.
 - [x] Keep deployed embedding provider as sentence-transformers/all-MiniLM-L6-v2.
-- [ ] Enable the `vector` extension in Supabase Postgres.
+- [x] Enable the `vector` extension in Supabase Postgres.
 - [x] Design a `document_chunks` table with text, embedding, and source metadata.
 - [x] Add environment variables for Supabase URL and service key.
 - [x] Create a vector-store adapter interface for ChromaDB vs Supabase.
@@ -43,7 +43,7 @@ This list tracks work from Phase 2 onward. Prioritize current-phase tasks first,
 - [x] Implement Supabase similarity search for retrieval.
 - [x] Add migration notes from local ChromaDB to Supabase pgvector.
 - [x] Update deployment README with Supabase setup steps.
-- [ ] Confirm deployed backend does not depend on local filesystem vector storage.
+- [ ] Confirm deployed backend does not depend on local filesystem vector storage after hosted deploy test.
 
 ## Phase 3 Review Intelligence
 
@@ -61,6 +61,10 @@ This list tracks work from Phase 2 onward. Prioritize current-phase tasks first,
 - [x] Generate unique booking codes.
 - [x] Add PII deflection.
 - [x] Make the greeting use the current Weekly Pulse top theme.
+- [x] Replace typed scheduler flow with Vapi browser voice transport.
+- [x] Keep Vapi transport-only and preserve backend scheduler logic.
+- [x] Add date-aware scheduler handling for relative-date phrases.
+- [x] Add short delayed filler speech for long scheduler turns.
 
 ## Phase 5 MCP & Human Approval
 
@@ -70,6 +74,8 @@ This list tracks work from Phase 2 onward. Prioritize current-phase tasks first,
 - [x] Create pending Email Draft actions after booking.
 - [x] Execute mock tools only after approval.
 - [x] Log approved and rejected actions.
+- [x] Add sample advisor roster and conflict-aware slot assignment.
+- [x] Log approved booking details to Google Sheets.
 
 ## Phase 6 AI Evaluations
 
@@ -91,3 +97,4 @@ This list tracks work from Phase 2 onward. Prioritize current-phase tasks first,
 - [x] Prepare sample voice transcript.
 - [ ] Record 5-minute demo video.
 - [x] Document known limitations.
+- [x] Update core documentation to reflect current architecture and deployment status.

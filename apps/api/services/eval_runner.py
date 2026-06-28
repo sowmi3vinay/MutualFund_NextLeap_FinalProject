@@ -174,7 +174,7 @@ def _voice_checks():
     pulse = _load_json(WEEKLY_PULSE_PATH)
     top_theme = (pulse.get("top_theme") or "").lower()
     greeting = scheduler_greeting().lower()
-    voice_turn = handle_voice_turn("I want to book a call about my SIP mandate.")
+    voice_turn = handle_voice_turn("I want to book a call tomorrow at 2 PM about my SIP mandate.")
     return {
         "greeting_contains_top_theme": bool(top_theme) and top_theme in greeting,
         "booking_code_generated": bool(voice_turn.get("booking_code")),
@@ -182,7 +182,7 @@ def _voice_checks():
 
 
 def _mcp_checks():
-    booking = handle_voice_turn("Schedule an advisor call")
+    booking = handle_voice_turn("Schedule an advisor call tomorrow at 2 PM")
     booking_code = booking.get("booking_code")
     actions = [action for action in _ACTIONS if action.get("booking_code") == booking_code]
     action_types = {action.get("type") for action in actions}

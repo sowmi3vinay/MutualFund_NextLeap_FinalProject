@@ -10,3 +10,5 @@ sentence-transformers
 groq
 supabase
 psycopg2-binary
+gspread
+google-auth

@@ -52,7 +52,7 @@ def ask_faq(request: FAQRequest):
     memory = remember_turn(
         memory_context["session_id"],
         memory_context["thread_id"],
-        memory_context["rewritten_question"],
+        request.question,
         response["answer"],
         response.get("citations", []),
     )

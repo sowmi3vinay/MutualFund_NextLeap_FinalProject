@@ -4,41 +4,7 @@ from services.mcp_orchestrator import approve_and_execute_action, reject_action 
 
 router = APIRouter()
 
-_ACTIONS = [
-    {
-        "approval_id": "APR-001",
-        "type": "calendar_hold",
-        "action_type": "Calendar Hold",
-        "status": "pending",
-        "summary": "Mock calendar hold for booking KV-B391, Friday 3:00 PM.",
-        "details": {"slot": "Friday 3:00 PM", "purpose": "Tentative advisor appointment hold"},
-        "booking_code": "KV-B391",
-        "executed": False,
-        "execution_result": None,
-    },
-    {
-        "approval_id": "APR-002",
-        "type": "notes_append",
-        "action_type": "Notes Entry",
-        "status": "pending",
-        "summary": "Append booking notes for SIP mandate discussion.",
-        "details": {"intent": "book_appointment", "transcript_summary": "SIP mandate discussion"},
-        "booking_code": "KV-B391",
-        "executed": False,
-        "execution_result": None,
-    },
-    {
-        "approval_id": "APR-003",
-        "type": "email_draft",
-        "action_type": "Email Draft",
-        "status": "pending",
-        "summary": "Draft advisor email with booking context.",
-        "details": {"intent": "book_appointment", "auto_send": False},
-        "booking_code": "KV-B391",
-        "executed": False,
-        "execution_result": None,
-    },
-]
+_ACTIONS = []
 
 
 def _find_action(approval_id):

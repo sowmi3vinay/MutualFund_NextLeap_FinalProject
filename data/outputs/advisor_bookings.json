@@ -1,0 +1,44 @@
+[
+  {
+    "booking_code": "KV-K877",
+    "advisor_id": "ADV-001",
+    "advisor_name": "Asha Mehta",
+    "slot": "Friday, June 26 at 5:00 PM",
+    "slot_start_iso": "2026-06-26T17:00:00+05:30",
+    "slot_end_iso": "2026-06-26T17:30:00+05:30",
+    "timezone": "Asia/Kolkata",
+    "intent": "reschedule_appointment",
+    "customer_topic": "exit load",
+    "transcript_summary": "I have an exit load problem. Friday 5 PM.",
+    "status": "pending",
+    "approval_status": "pending"
+  },
+  {
+    "booking_code": "KV-S267",
+    "advisor_id": "ADV-002",
+    "advisor_name": "Rohan Iyer",
+    "slot": "Friday, June 26 at 5:00 PM",
+    "slot_start_iso": "2026-06-26T17:00:00+05:30",
+    "slot_end_iso": "2026-06-26T17:30:00+05:30",
+    "timezone": "Asia/Kolkata",
+    "intent": "reschedule_appointment",
+    "customer_topic": "exit load",
+    "transcript_summary": "I have an exit load problem. Friday 5 PM.",
+    "status": "pending",
+    "approval_status": "pending"
+  },
+  {
+    "booking_code": "KV-O126",
+    "advisor_id": "ADV-003",
+    "advisor_name": "Neha Kapoor",
+    "slot": "Friday, June 26 at 5:00 PM",
+    "slot_start_iso": "2026-06-26T17:00:00+05:30",
+    "slot_end_iso": "2026-06-26T17:30:00+05:30",
+    "timezone": "Asia/Kolkata",
+    "intent": "reschedule_appointment",
+    "customer_topic": "exit load",
+    "transcript_summary": "I need a call about exit load. Friday 5 PM.",
+    "status": "pending",
+    "approval_status": "pending"
+  }
+]

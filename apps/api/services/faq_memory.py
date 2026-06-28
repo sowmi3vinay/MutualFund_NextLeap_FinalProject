@@ -9,12 +9,18 @@ SCHEME_ALIASES = {
     "HDFC ELSS Tax Saver": [
         "hdfc elss tax saver",
         "elss tax saver",
+        "hdfc elss tax saver fund",
+        "hdfc elss",
         "selected elss fund",
         "elss fund",
     ],
     "HDFC Flexi Cap Fund": [
         "hdfc flexi cap fund",
+        "hdfc flexicap fund",
+        "hdfc flexi cap",
+        "hdfc flexicap",
         "flexi cap fund",
+        "flexicap fund",
         "selected flexi cap fund",
     ],
     "HDFC Balanced Advantage Fund": [
@@ -24,8 +30,23 @@ SCHEME_ALIASES = {
     "HDFC Mid-Cap Opportunities Fund": [
         "hdfc mid-cap opportunities fund",
         "hdfc mid cap opportunities fund",
+        "hdfc mid cap",
+        "hdfc mid-cap",
+        "hdfc mid cap fund",
+        "hdfc mid-cap fund",
+        "hdfc midcap fund",
+        "mid cap fund",
+        "midcap fund",
         "mid-cap opportunities fund",
         "mid cap opportunities fund",
+    ],
+    "HDFC Small Cap Fund": [
+        "hdfc small cap fund",
+        "hdfc smallcap fund",
+        "hdfc small cap",
+        "hdfc smallcap",
+        "small cap fund",
+        "smallcap fund",
     ],
 }
 
@@ -102,12 +123,11 @@ def contextualize_question(question, session_id=None, thread_id=None):
     topic_for_query = detected_topic or last_topic
 
     additions = []
-    if scheme_for_query and (
-        not detected_scheme or scheme_for_query.lower() not in question_text.lower()
-    ):
-        additions.append(f"Scheme context: {scheme_for_query}.")
-    if topic_for_query and not detected_topic and _looks_contextual(question_text):
-        additions.append(f"Topic context: {topic_for_query}.")
+    use_memory = _looks_contextual(question_text)
+    if use_memory and scheme_for_query and not detected_scheme:
+        additions.append(f"For {scheme_for_query}.")
+    if use_memory and topic_for_query and not detected_topic:
+        additions.append(f"The topic is {topic_for_query}.")
 
     if additions:
         rewritten_question = f"{question_text} {' '.join(additions)}"
@@ -136,8 +156,9 @@ def _looks_contextual(question):
 
 def remember_turn(session_id, thread_id, question, answer, citations=None):
     session_key, thread_key, thread = _ensure_thread(session_id, thread_id)
-    scheme = detect_scheme(question) or thread.get("last_scheme")
-    topic = detect_topic(question) or thread.get("last_topic")
+    scheme = detect_scheme(question)
+    topic = detect_topic(question)
+    use_memory = _looks_contextual(question)
     turn = {
         "question": question,
         "answer": answer,
@@ -148,8 +169,14 @@ def remember_turn(session_id, thread_id, question, answer, citations=None):
     with _MEMORY_LOCK:
         thread["turns"].append(turn)
         thread["turns"] = thread["turns"][-MAX_TURNS_PER_THREAD:]
-        thread["last_scheme"] = scheme
-        thread["last_topic"] = topic
+        if scheme:
+            thread["last_scheme"] = scheme
+        elif use_memory:
+            thread["last_scheme"] = thread.get("last_scheme")
+        if topic:
+            thread["last_topic"] = topic
+        elif use_memory:
+            thread["last_topic"] = thread.get("last_topic")
         thread["updated_at"] = _now()
 
     return memory_summary(session_key, thread_key)

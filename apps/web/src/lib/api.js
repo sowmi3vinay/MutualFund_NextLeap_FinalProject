@@ -1,19 +1,52 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
-async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    ...options,
+function delay(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
   });
+}
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+async function request(path, options = {}) {
+  const url = `${API_BASE_URL}${path}`;
+  const retryCount = options.retryCount ?? 2;
+  const timeoutMs = options.timeoutMs ?? 15000;
+  let lastError;
+
+  for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+        signal: controller.signal,
+        ...options,
+      });
+      window.clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      window.clearTimeout(timeoutId);
+      lastError = error;
+      const canRetry = error instanceof TypeError || error.name === 'AbortError';
+      if (!canRetry || attempt === retryCount) {
+        break;
+      }
+      await delay(350 * (attempt + 1));
+    }
   }
 
-  return response.json();
+  if (lastError instanceof TypeError) {
+    throw new Error(`Could not reach the API at ${API_BASE_URL}. Check that the backend is running.`);
+  }
+
+  throw lastError;
 }
 
 export function askFAQ(question, sessionId, threadId = 'default') {
@@ -34,7 +67,10 @@ export function generatePulse() {
       reviews_csv_path: 'data/reviews/sample_reviews.csv',
       week_start: '2026-06-01',
       week_end: '2026-06-07',
+      refresh_vectors: false,
     }),
+    retryCount: 0,
+    timeoutMs: 45000,
   });
 }
 
@@ -42,6 +78,8 @@ export function sendVoiceTurn(transcript) {
   return request('/scheduler/voice-turn', {
     method: 'POST',
     body: JSON.stringify({ transcript }),
+    retryCount: 0,
+    timeoutMs: 5000,
   });
 }
 

@@ -3,6 +3,7 @@ import re
 from mcp_tools.calendar_hold_tool import execute_calendar_hold
 from mcp_tools.doc_append_tool import execute_doc_append
 from mcp_tools.email_draft_tool import execute_email_draft
+from services.advisor_scheduler import update_booking_status
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
@@ -32,14 +33,33 @@ def _next_approval_id(actions):
     return highest_id + 1
 
 
-def create_pending_actions(actions, booking_code, slot, intent, transcript_summary=""):
+def create_pending_actions(
+    actions,
+    booking_code,
+    slot,
+    assigned_advisor,
+    intent,
+    transcript_summary="",
+    customer_topic="",
+    slot_start_iso=None,
+    slot_end_iso=None,
+    timezone=None,
+):
     start_id = _next_approval_id(actions)
+    slot_details = {
+        "slot": slot,
+        "assigned_advisor": assigned_advisor,
+        "customer_topic": customer_topic,
+        "slot_start_iso": slot_start_iso,
+        "slot_end_iso": slot_end_iso,
+        "timezone": timezone,
+    }
     action_specs = [
         (
             "calendar_hold",
             f"Calendar Hold for booking {booking_code}, {slot}.",
             {
-                "slot": slot,
+                **slot_details,
                 "purpose": "Tentative advisor appointment hold",
             },
         ),
@@ -47,7 +67,7 @@ def create_pending_actions(actions, booking_code, slot, intent, transcript_summa
             "notes_append",
             f"Notes Entry for booking {booking_code}.",
             {
-                "slot": slot,
+                **slot_details,
                 "intent": intent,
                 "transcript_summary": transcript_summary,
             },
@@ -56,7 +76,7 @@ def create_pending_actions(actions, booking_code, slot, intent, transcript_summa
             "email_draft",
             f"Email Draft for advisor with booking {booking_code}.",
             {
-                "slot": slot,
+                **slot_details,
                 "intent": intent,
                 "auto_send": False,
             },
@@ -75,6 +95,10 @@ def create_pending_actions(actions, booking_code, slot, intent, transcript_summa
                 "details": details,
                 "booking_code": booking_code,
                 "slot": slot,
+                "assigned_advisor": assigned_advisor,
+                "slot_start_iso": slot_start_iso,
+                "slot_end_iso": slot_end_iso,
+                "timezone": timezone,
                 "intent": intent,
                 "executed": False,
                 "execution_result": None,
@@ -90,6 +114,7 @@ def approve_and_execute_action(action):
         return action
 
     action["status"] = STATUS_APPROVED
+    update_booking_status(action.get("booking_code"), approval_status=STATUS_APPROVED)
     executor = TOOL_EXECUTORS.get(action["type"])
     if executor is None:
         action["status"] = STATUS_FAILED
@@ -103,10 +128,12 @@ def approve_and_execute_action(action):
         action["executed"] = True
         action["execution_result"] = result["message"]
         action["tool_result"] = result
+        update_booking_status(action.get("booking_code"), status=STATUS_COMPLETED, approval_status=STATUS_COMPLETED)
     except Exception as error:
         action["status"] = STATUS_FAILED
         action["executed"] = False
         action["execution_result"] = str(error)
+        update_booking_status(action.get("booking_code"), status=STATUS_FAILED, approval_status=STATUS_FAILED)
 
     return action
 
@@ -116,4 +143,5 @@ def reject_action(action):
         action["status"] = STATUS_REJECTED
         action["executed"] = False
         action["execution_result"] = "Rejected by human approver"
+        update_booking_status(action.get("booking_code"), status=STATUS_REJECTED, approval_status=STATUS_REJECTED)
     return action

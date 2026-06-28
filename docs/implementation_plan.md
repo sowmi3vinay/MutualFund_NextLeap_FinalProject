@@ -16,11 +16,11 @@ The project should be built in this order:
 4. Voice UX & Intent
 5. MCP & Human Approval
 6. AI Evaluations
-7. Final Demo & Submission
+7. Final Demo, Deployment & Submission
 
 The first priority is to create a working dashboard with mock APIs. Real AI, RAG, voice, and MCP integrations should be added only after the skeleton works.
 
-Project-level todos from Phase 2 onward are tracked in `docs/todo.md`, including the deployment migration path from local ChromaDB to Supabase pgvector.
+Project-level todos from Phase 2 onward are tracked in `docs/todo.md`, including the deployment migration path from local ChromaDB to Supabase pgvector and the final hosted rollout checklist.
 
 ---
 
@@ -108,6 +108,7 @@ Current Phase 1 notes:
 * FAQ, Weekly Pulse, Voice Scheduler, and Approval Centre views are visible.
 * Frontend API helper calls backend routes.
 * Approval Centre can approve or reject mock MCP actions.
+* Sidebar-based dashboard navigation replaced the earlier top-tab layout.
 
 ---
 
@@ -158,6 +159,13 @@ EMBEDDING_LOCAL_FILES_ONLY=true
 ```
 
 Set `EMBEDDING_LOCAL_FILES_ONLY=false` only when the MiniLM model needs to be downloaded for the first time.
+
+Current Phase 2 notes:
+
+* FAQ memory supports contextual follow-ups with `session_id` and `thread_id`.
+* Retrieval is abstracted behind a vector-store adapter.
+* Supabase pgvector support has been implemented in parallel with Chroma fallback.
+* FAQ guardrails refuse advice-oriented prompts and preserve explicit scheme switching.
 
 ## Tasks
 

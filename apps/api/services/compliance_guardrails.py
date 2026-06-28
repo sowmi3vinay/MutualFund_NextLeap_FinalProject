@@ -22,8 +22,14 @@ def is_advice_request(text):
         "which fund should i invest",
         "should i invest",
         "best fund",
+        "best mf",
+        "best mutual fund",
+        "which is best mf",
+        "which is the best mf",
+        "which is best mutual fund",
         "recommend a fund",
         "recommend fund",
+        "which fund is best",
         "highest return",
         "highest returns",
         "future return",
@@ -35,6 +41,7 @@ def is_advice_request(text):
         "where should i invest",
         "rank funds",
         "top performing fund",
+        "best performing fund",
     ]
     return any(marker in lowered for marker in advice_markers)
 
