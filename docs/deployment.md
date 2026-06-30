@@ -23,9 +23,11 @@ Recommended first deployment target: Render web service.
 2. Use these commands:
 
 ```bash
-pip install -r apps/api/requirements.txt
+pip install -r apps/api/requirements-render.txt
 cd apps/api && uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
+
+Use Python `3.11.9` for the backend service. The repo now includes both `render.yaml` and `.python-version` to keep Render away from Python 3.14, which was pulling an oversized CUDA-enabled `torch` stack and causing out-of-memory failures during deploy.
 
 3. Set environment variables:
 
@@ -45,6 +47,13 @@ GOOGLE_SHEETS_BOOKING_WORKSHEET=Bookings
 ```
 
 `EMBEDDING_LOCAL_FILES_ONLY=false` allows the server to download `sentence-transformers/all-MiniLM-L6-v2` on first boot. Keep it `true` only when the model is already cached on the deployment machine.
+
+If you deploy on Render, prefer the repo `render.yaml` values for:
+
+```text
+PYTHON_VERSION=3.11.9
+VECTOR_BACKEND=supabase
+```
 
 4. Confirm the backend is live:
 
