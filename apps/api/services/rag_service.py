@@ -202,14 +202,21 @@ def _chunk_matches_topic(chunk, topic_name):
 
 
 def retrieve_relevant_chunks(query, top_k=5):
-    vector_store = get_vector_store()
-    if vector_store.count() == 0:
-        return []
+    keyword_only_chunks = _keyword_chunks(query, limit=max(top_k, 10))
 
-    query_embedding = embed_query(query)
-    candidate_count = max(top_k, min(max(top_k * 10, 50), vector_store.count()))
-    chunks = vector_store.search(query_embedding, top_k=candidate_count)
-    hybrid_chunks = _dedupe_chunks(chunks + _keyword_chunks(query))
+    try:
+        vector_store = get_vector_store()
+        vector_count = vector_store.count()
+        if vector_count == 0:
+            hybrid_chunks = keyword_only_chunks
+        else:
+            query_embedding = embed_query(query)
+            candidate_count = max(top_k, min(max(top_k * 10, 50), vector_count))
+            chunks = vector_store.search(query_embedding, top_k=candidate_count)
+            hybrid_chunks = _dedupe_chunks(chunks + keyword_only_chunks)
+    except Exception:
+        hybrid_chunks = keyword_only_chunks
+
     reranked_chunks = _rerank_chunks(query, hybrid_chunks)
 
     detected_scheme = detect_scheme(query)

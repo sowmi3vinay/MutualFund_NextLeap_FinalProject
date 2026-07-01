@@ -3,7 +3,6 @@ import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_PROVIDER = "sentence-transformers"
@@ -24,6 +23,8 @@ def get_embedding_model():
     _load_environment()
     with _MODEL_LOCK:
         if _MODEL is None:
+            from sentence_transformers import SentenceTransformer
+
             local_files_only = os.getenv("EMBEDDING_LOCAL_FILES_ONLY", "true").lower() == "true"
             if local_files_only:
                 os.environ.setdefault("HF_HUB_OFFLINE", "1")
