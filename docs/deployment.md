@@ -15,6 +15,10 @@ Current deployment status:
 - Google Sheets logging exists
 - final hosted deployment is still pending
 
+For a single copy-paste reference of all deployment variables, use:
+
+`render.env.example`
+
 ## Backend
 
 Recommended first deployment target: Render web service.
@@ -23,11 +27,11 @@ Recommended first deployment target: Render web service.
 2. Use these commands:
 
 ```bash
-pip install -r apps/api/requirements-render.txt
-cd apps/api && uvicorn main:app --host 0.0.0.0 --port $PORT
+pip install -r requirements-render.txt
+uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
-Use Python `3.11.9` for the backend service. The repo now includes both `render.yaml` and `.python-version` to keep Render away from Python 3.14, which was pulling an oversized CUDA-enabled `torch` stack and causing out-of-memory failures during deploy.
+Set the backend service Root Directory to `apps/api`. Use Python `3.11.9` for the backend service. The repo now includes both `render.yaml` and `.python-version` to keep Render away from Python 3.14, which was pulling an oversized CUDA-enabled `torch` stack and causing out-of-memory failures during deploy. The Render requirements file also pins `numpy<2` to avoid the PyTorch / NumPy 2 runtime incompatibility shown in Render logs.
 
 3. Set environment variables:
 
