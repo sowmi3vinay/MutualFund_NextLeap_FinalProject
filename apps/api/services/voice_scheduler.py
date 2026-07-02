@@ -383,15 +383,28 @@ def is_greeting_or_mic_check(transcript):
 
 def is_advisor_topic_question(transcript):
     transcript_lower = _normalize_transcript(transcript)
+    if re.search(
+        r"\bwhat(?:\s+are)?\s+(?:the\s+)?topics?\s+(?:which\s+)?(?:you\s+)?can\s+help(?:\s+me)?\s+with\b",
+        transcript_lower,
+    ):
+        return True
     return any(
         phrase in transcript_lower
         for phrase in [
             "what topics",
             "which topics",
+            "what all topics",
+            "what can you help me with",
+            "what can you help with",
+            "which topics can you help",
+            "which topics you can help",
+            "what can you do",
+            "how can you help",
             "what can adviser help",
             "what can advisor help",
             "topics adviser can help",
             "topics advisor can help",
+            "range of topics",
         ]
     )
 
@@ -843,7 +856,7 @@ def _preparation_reply():
 def _advisor_topics_reply():
     return (
         "An advisor can help with exit load, redemption steps, fees, benchmarks, riskometer, "
-        "statements, and SIP questions."
+        "statements, and SIP questions. If you want a call, please share a weekday and time."
     )
 
 
@@ -856,7 +869,10 @@ def _schedule_day_time_reply():
 
 
 def _unknown_reply():
-    return "I can help book or reschedule an advisor call. Please tell me a weekday and time."
+    return (
+        "I can help with advisor-call booking for exit load, redemption steps, fees, benchmarks, "
+        "riskometer, statements, and SIP questions. Please tell me a weekday and time if you want a call."
+    )
 
 
 def _looks_like_scheduling_request(transcript):

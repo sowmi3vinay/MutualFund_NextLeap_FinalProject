@@ -40,12 +40,75 @@ def _query_terms(query):
     return [term for term in re.findall(r"[a-z0-9]+", query.lower()) if len(term) > 2]
 
 
+def _normalized_text(value):
+    return (value or "").strip().lower()
+
+
+def _is_generic_topic_query(query, detected_scheme=None, detected_topic=None):
+    if detected_scheme or not detected_topic:
+        return False
+    meaningful_terms = [
+        term for term in _query_terms(query) if term not in GENERIC_QUERY_TERMS
+    ]
+    return len(meaningful_terms) <= 4
+
+
+def _chunk_has_explicit_topic_match(chunk, topic_name):
+    topic = _normalized_text(chunk.get("topic"))
+    title = _normalized_text(chunk.get("title"))
+    source_type = _normalized_text(chunk.get("source_type"))
+    source_id = _normalized_text(chunk.get("source_id"))
+    topic_name = _normalized_text(topic_name)
+
+    if topic == topic_name:
+        return True
+    if topic_name in title:
+        return True
+    if source_id.startswith("gen") and topic_name in _normalized_text(chunk.get("text"))[:200]:
+        return True
+    if source_type in {"amfi", "generated review intelligence"} and topic_name in (
+        " ".join([topic, title, _normalized_text(chunk.get("text"))[:200]])
+    ):
+        return True
+    return False
+
+
+def _prefer_explicit_topic_chunks(chunks, topic_name, top_k):
+    explicit_matches = [
+        chunk for chunk in chunks if _chunk_has_explicit_topic_match(chunk, topic_name)
+    ]
+    if not explicit_matches:
+        return chunks[:top_k]
+
+    ordered = _dedupe_chunks(explicit_matches + chunks)
+    return ordered[:top_k]
+
+
+def _limit_chunks_per_source(chunks, max_per_source=2):
+    limited = []
+    counts = {}
+    for chunk in chunks:
+        source_id = chunk.get("source_id") or chunk.get("title") or "unknown"
+        counts[source_id] = counts.get(source_id, 0) + 1
+        if counts[source_id] > max_per_source:
+            continue
+        limited.append(chunk)
+    return limited
+
+
 def _rerank_chunks(query, chunks):
     terms = _query_terms(query)
     if not terms:
         return chunks
 
     query_lower = query.lower()
+    detected_scheme = detect_scheme(query)
+    detected_topic = detect_topic(query)
+    generic_topic_query = _is_generic_topic_query(
+        query,
+        detected_scheme=detected_scheme,
+        detected_topic=detected_topic,
+    )
     phrase_boosts = [
         phrase
         for phrase in [
@@ -75,6 +138,16 @@ def _rerank_chunks(query, chunks):
         topic_score = sum(0.15 for term in terms if term in topic)
         text_score = sum(0.03 for term in terms if term in text)
         phrase_score = sum(1.0 for phrase in phrase_boosts if phrase in text or phrase in title)
+        explicit_topic_score = (
+            2.5 if detected_topic and _chunk_has_explicit_topic_match(chunk, detected_topic) else 0
+        )
+        generic_scheme_penalty = (
+            -1.75
+            if generic_topic_query
+            and topic == "scheme facts"
+            and not detected_scheme
+            else 0
+        )
         exact_exit_load_score = (
             3.0
             if "exit load" in query_lower
@@ -94,6 +167,8 @@ def _rerank_chunks(query, chunks):
             + topic_score
             + text_score
             + phrase_score
+            + explicit_topic_score
+            + generic_scheme_penalty
             + exact_exit_load_score
             + generated_fee_score
         )
@@ -107,6 +182,13 @@ def _keyword_chunks(query, limit=10):
 
     terms = _query_terms(query)
     query_lower = query.lower()
+    detected_scheme = detect_scheme(query)
+    detected_topic = detect_topic(query)
+    generic_topic_query = _is_generic_topic_query(
+        query,
+        detected_scheme=detected_scheme,
+        detected_topic=detected_topic,
+    )
     phrase_boosts = [
         phrase
         for phrase in [
@@ -140,28 +222,33 @@ def _keyword_chunks(query, limit=10):
             ).lower()
             term_score = sum(1 for term in terms if term in haystack)
             phrase_score = sum(5 for phrase in phrase_boosts if phrase in haystack)
-            score = term_score + phrase_score
+            chunk = {
+                "text": text,
+                "chunk_text": text,
+                "distance": 0.0,
+                "similarity": 1.0,
+                "source_id": metadata.get("source_id"),
+                "url": metadata.get("url"),
+                "title": metadata.get("title"),
+                "source_type": metadata.get("source_type"),
+                "scheme_name": metadata.get("scheme_name"),
+                "topic": metadata.get("topic"),
+            }
+            explicit_topic_score = (
+                6 if detected_topic and _chunk_has_explicit_topic_match(chunk, detected_topic) else 0
+            )
+            generic_scheme_penalty = (
+                -4
+                if generic_topic_query and _normalized_text(metadata.get("topic")) == "scheme facts"
+                else 0
+            )
+            score = term_score + phrase_score + explicit_topic_score + generic_scheme_penalty
             if score:
-                scored.append(
-                    (
-                        score,
-                        {
-                            "text": text,
-                            "chunk_text": text,
-                            "distance": 0.0,
-                            "similarity": 1.0,
-                            "source_id": metadata.get("source_id"),
-                            "url": metadata.get("url"),
-                            "title": metadata.get("title"),
-                            "source_type": metadata.get("source_type"),
-                            "scheme_name": metadata.get("scheme_name"),
-                            "topic": metadata.get("topic"),
-                        },
-                    )
-                )
+                scored.append((score, chunk))
 
     scored.sort(key=lambda item: item[0], reverse=True)
-    return [chunk for _, chunk in scored[:limit]]
+    selected = [chunk for _, chunk in scored[: max(limit, 25 if generic_topic_query else limit)]]
+    return _limit_chunks_per_source(selected)[:limit]
 
 
 def _dedupe_chunks(chunks):
@@ -203,6 +290,8 @@ def _chunk_matches_topic(chunk, topic_name):
 
 def retrieve_relevant_chunks(query, top_k=5):
     keyword_only_chunks = _keyword_chunks(query, limit=max(top_k, 10))
+    detected_scheme = detect_scheme(query)
+    detected_topic = detect_topic(query)
 
     try:
         vector_store = get_vector_store()
@@ -215,12 +304,9 @@ def retrieve_relevant_chunks(query, top_k=5):
             chunks = vector_store.search(query_embedding, top_k=candidate_count)
             hybrid_chunks = _dedupe_chunks(chunks + keyword_only_chunks)
     except Exception:
-        hybrid_chunks = keyword_only_chunks
-
+            hybrid_chunks = keyword_only_chunks
+    
     reranked_chunks = _rerank_chunks(query, hybrid_chunks)
-
-    detected_scheme = detect_scheme(query)
-    detected_topic = detect_topic(query)
 
     if detected_scheme:
         scheme_chunks = [chunk for chunk in reranked_chunks if _chunk_matches_scheme(chunk, detected_scheme)]
@@ -233,6 +319,12 @@ def retrieve_relevant_chunks(query, top_k=5):
         topic_chunks = [chunk for chunk in reranked_chunks if _chunk_matches_topic(chunk, detected_topic)]
         if topic_chunks:
             reranked_chunks = topic_chunks
+
+    if _is_generic_topic_query(query, detected_scheme=detected_scheme, detected_topic=detected_topic):
+        reranked_chunks = _prefer_explicit_topic_chunks(reranked_chunks, detected_topic, top_k=top_k)
+        reranked_chunks = _limit_chunks_per_source(reranked_chunks, max_per_source=1)
+    else:
+        reranked_chunks = _limit_chunks_per_source(reranked_chunks, max_per_source=2)
 
     return reranked_chunks[:top_k]
 

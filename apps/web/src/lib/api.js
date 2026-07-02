@@ -10,6 +10,7 @@ async function request(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
   const retryCount = options.retryCount ?? 2;
   const timeoutMs = options.timeoutMs ?? 15000;
+  const timeoutMessage = options.timeoutMessage;
   let lastError;
 
   for (let attempt = 0; attempt <= retryCount; attempt += 1) {
@@ -46,6 +47,10 @@ async function request(path, options = {}) {
     throw new Error(`Could not reach the API at ${API_BASE_URL}. Check that the backend is running.`);
   }
 
+  if (lastError?.name === 'AbortError') {
+    throw new Error(timeoutMessage || 'The request took too long. Please try again.');
+  }
+
   throw lastError;
 }
 
@@ -57,6 +62,9 @@ export function askFAQ(question, sessionId, threadId = 'default') {
       session_id: sessionId,
       thread_id: threadId,
     }),
+    retryCount: 0,
+    timeoutMs: 30000,
+    timeoutMessage: 'The FAQ request took too long. Please try again in a moment.',
   });
 }
 
@@ -79,7 +87,8 @@ export function sendVoiceTurn(transcript) {
     method: 'POST',
     body: JSON.stringify({ transcript }),
     retryCount: 0,
-    timeoutMs: 5000,
+    timeoutMs: 12000,
+    timeoutMessage: 'The scheduler took too long to respond. Please try again.',
   });
 }
 
