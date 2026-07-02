@@ -513,6 +513,12 @@ def _with_spoken_reply(payload, spoken_reply=None):
     return payload
 
 
+def _maybe_attach_available_slots(payload, include_slots=False):
+    if include_slots:
+        payload["available_slots"] = available_advisor_slots()
+    return payload
+
+
 def _requested_day(transcript):
     transcript_lower = _normalize_transcript(transcript)
     matches = [
@@ -884,65 +890,59 @@ def handle_voice_turn(transcript):
     transcript = re.sub(r"\s+", " ", transcript or "").strip()
     greeting = scheduler_greeting()
     intent = detect_intent(transcript)
-    available_slots = available_advisor_slots()
     requested_date = _requested_date(transcript)
     requested_range_days = _requested_date_range_days(transcript)
     requested_time = _requested_time_minutes(transcript)
 
     if intent == "greeting_or_mic_check":
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": "Yes, I can hear you. How can I help?",
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }))
 
     if intent == "pii_detected":
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": PII_DEFLECTION_REPLY,
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }))
 
     if intent == "call_preparation":
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": _preparation_reply(),
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }))
 
     if intent == "advisor_topic_question":
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": _advisor_topics_reply(),
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }))
 
     if intent == "support_topic_discussion":
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": _support_topic_reply(),
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }))
 
     if intent == "available_slots":
         if requested_range_days:
@@ -955,30 +955,28 @@ def handle_voice_turn(transcript):
             )
         else:
             reply = _available_slots_reply()
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": reply,
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }, include_slots=True))
 
     if intent == "advice_or_performance_request":
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": ADVICE_DEFLECTION_REPLY,
             "booking_code": None,
             "intent": intent,
             "slot": None,
             "pending_actions_created": False,
             "greeting": greeting,
-            "available_slots": available_slots,
-        })
+        }))
 
     if intent in {"book_appointment", "reschedule_appointment"}:
         if not _has_requested_slot_preference(transcript):
-            return _with_spoken_reply({
+            return _with_spoken_reply(_maybe_attach_available_slots({
                 "reply": _support_topic_reply()
                 if is_support_topic_discussion(transcript)
                 else _schedule_day_time_reply(),
@@ -987,60 +985,54 @@ def handle_voice_turn(transcript):
                 "slot": None,
                 "pending_actions_created": False,
                 "greeting": greeting,
-                "available_slots": available_slots,
-            })
+            }))
         if requested_date and not _is_business_date(requested_date):
-            return _with_spoken_reply({
+            return _with_spoken_reply(_maybe_attach_available_slots({
                 "reply": _outside_booking_hours_reply(requested_date),
                 "booking_code": None,
                 "intent": intent,
                 "slot": None,
                 "pending_actions_created": False,
                 "greeting": greeting,
-                "available_slots": available_slots,
-            })
+            }))
         if requested_date and requested_time is not None and not _requested_exact_slot_available(requested_date, requested_time):
-            return _with_spoken_reply({
+            return _with_spoken_reply(_maybe_attach_available_slots({
                 "reply": _time_outside_hours_reply(requested_date, requested_time),
                 "booking_code": None,
                 "intent": intent,
                 "slot": None,
                 "pending_actions_created": False,
                 "greeting": greeting,
-                "available_slots": available_slots,
-            })
+            }))
         if requested_range_days and _requested_time_minutes(transcript) is None:
-            return _with_spoken_reply({
+            return _with_spoken_reply(_maybe_attach_available_slots({
                 "reply": _range_slots_reply(transcript),
                 "booking_code": None,
                 "intent": "available_slots",
                 "slot": None,
                 "pending_actions_created": False,
                 "greeting": greeting,
-                "available_slots": available_slots,
-            })
+            }, include_slots=True))
         if requested_date and _requested_time_minutes(transcript) is None:
-            return _with_spoken_reply({
+            return _with_spoken_reply(_maybe_attach_available_slots({
                 "reply": _specific_time_options_reply(requested_date, _requested_window(transcript)),
                 "booking_code": None,
                 "intent": "available_slots",
                 "slot": None,
                 "pending_actions_created": False,
                 "greeting": greeting,
-                "available_slots": available_slots,
-            })
+            }, include_slots=True))
         slot = choose_advisor_slot(intent, transcript)
         assigned_advisor = find_available_advisor(slot)
         if assigned_advisor is None:
-            return _with_spoken_reply({
+            return _with_spoken_reply(_maybe_attach_available_slots({
                 "reply": f"{_slot_label(slot)} is no longer available. Please choose another time on {_business_days_label()}.",
                 "booking_code": None,
                 "intent": "available_slots",
                 "slot": None,
                 "pending_actions_created": False,
                 "greeting": greeting,
-                "available_slots": available_slots,
-            })
+            }, include_slots=True))
         slot_label = _slot_label(slot)
         booking_code = generate_booking_code()
         customer_topic = _customer_topic(transcript)
@@ -1057,7 +1049,7 @@ def handle_voice_turn(transcript):
             f"Tentative advisor slot {action_text} for {slot_label} with {assigned_advisor['name']}. "
             f"Your booking code is {spoken_code}. Approval is pending."
         )
-        return _with_spoken_reply({
+        return _with_spoken_reply(_maybe_attach_available_slots({
             "reply": reply,
             "booking_code": booking_code,
             "intent": intent,
@@ -1065,15 +1057,13 @@ def handle_voice_turn(transcript):
             "assigned_advisor": assigned_advisor["name"],
             "pending_actions_created": True,
             "greeting": greeting,
-            "available_slots": available_slots,
-        }, spoken_reply)
+        }), spoken_reply)
 
-    return _with_spoken_reply({
+    return _with_spoken_reply(_maybe_attach_available_slots({
         "reply": _schedule_day_time_reply() if _looks_like_scheduling_request(transcript) else _unknown_reply(),
         "booking_code": None,
         "intent": intent,
         "slot": None,
         "pending_actions_created": False,
         "greeting": greeting,
-        "available_slots": available_slots,
-    })
+    }))

@@ -84,6 +84,33 @@ def _prefer_explicit_topic_chunks(chunks, topic_name, top_k):
     return ordered[:top_k]
 
 
+def _chunk_has_explicit_exit_load_clause(chunk):
+    text = _normalized_text(chunk.get("text"))
+    return any(
+        phrase in text
+        for phrase in [
+            "exit load:",
+            "load structure",
+            "1.00%",
+            "within 1 year from the date of allotment",
+            "within 1 year from the date of allotment of units",
+            "if redeemed / switched-out within 1 year",
+            "if units are redeemed or switched out within 1 year",
+            "no exit load is payable",
+        ]
+    )
+
+
+def _prefer_explicit_exit_load_chunks(chunks, top_k):
+    explicit_matches = [
+        chunk for chunk in chunks if _chunk_has_explicit_exit_load_clause(chunk)
+    ]
+    if not explicit_matches:
+        return chunks[:top_k]
+    ordered = _dedupe_chunks(explicit_matches + chunks)
+    return ordered[:top_k]
+
+
 def _limit_chunks_per_source(chunks, max_per_source=2):
     limited = []
     counts = {}
@@ -148,6 +175,26 @@ def _rerank_chunks(query, chunks):
             and not detected_scheme
             else 0
         )
+        explicit_load_clause_score = (
+            5.0
+            if "exit load" in query_lower
+            and (
+                "exit load:" in text
+                or "load structure" in text
+                or "1.00%" in text
+                or "within 1 year from the date of allotment" in text
+                or "no exit load is payable" in text
+            )
+            else 0
+        )
+        generic_exit_load_penalty = (
+            -3.0
+            if "exit load" in query_lower
+            and "applicable exit loads" in text
+            and "exit load:" not in text
+            and "1.00%" not in text
+            else 0
+        )
         exact_exit_load_score = (
             3.0
             if "exit load" in query_lower
@@ -169,6 +216,8 @@ def _rerank_chunks(query, chunks):
             + phrase_score
             + explicit_topic_score
             + generic_scheme_penalty
+            + explicit_load_clause_score
+            + generic_exit_load_penalty
             + exact_exit_load_score
             + generated_fee_score
         )
@@ -275,6 +324,81 @@ def _chunk_matches_scheme(chunk, scheme_name):
     return scheme_name.lower() in haystack
 
 
+def _canonical_scheme_tokens(scheme_name):
+    tokens = []
+    normalized = _normalized_text(scheme_name)
+    if normalized:
+        tokens.append(normalized)
+        compact = re.sub(r"[^a-z0-9]+", " ", normalized).strip()
+        if compact and compact not in tokens:
+            tokens.append(compact)
+        without_fund = re.sub(r"\bfund\b", "", compact).strip()
+        without_fund = re.sub(r"\s+", " ", without_fund)
+        if without_fund and without_fund not in tokens:
+            tokens.append(without_fund)
+    return tokens
+
+
+def _scheme_topic_priority_chunks(scheme_name, topic_name, limit=12):
+    if not CHUNKS_PATH.exists() or not scheme_name or not topic_name:
+        return []
+
+    scheme_tokens = _canonical_scheme_tokens(scheme_name)
+    topic_name = _normalized_text(topic_name)
+    scored = []
+
+    with CHUNKS_PATH.open(encoding="utf-8") as chunks_file:
+        for line in chunks_file:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            text = row.get("text", "")
+            metadata = row.get("metadata", {})
+            chunk = {
+                "text": text,
+                "chunk_text": text,
+                "distance": 0.0,
+                "similarity": 1.0,
+                "source_id": metadata.get("source_id"),
+                "url": metadata.get("url"),
+                "title": metadata.get("title"),
+                "source_type": metadata.get("source_type"),
+                "scheme_name": metadata.get("scheme_name"),
+                "topic": metadata.get("topic"),
+            }
+
+            scheme_haystack = " ".join(
+                [
+                    metadata.get("scheme_name", ""),
+                    metadata.get("title", ""),
+                    text[:300],
+                ]
+            ).lower()
+            if not any(token and token in scheme_haystack for token in scheme_tokens):
+                continue
+            if not _chunk_matches_topic(chunk, topic_name):
+                continue
+
+            score = 0
+            if _chunk_has_explicit_topic_match(chunk, topic_name):
+                score += 8
+            if topic_name == "exit load" and _chunk_has_explicit_exit_load_clause(chunk):
+                score += 12
+            if "exit load" in _normalized_text(text):
+                score += 4
+            if "load structure" in _normalized_text(text):
+                score += 4
+            if "applicable exit loads" in _normalized_text(text):
+                score -= 4
+
+            if score > 0:
+                scored.append((score, chunk))
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    selected = [chunk for _, chunk in scored[: max(limit, 20)]]
+    return _dedupe_chunks(selected)[:limit]
+
+
 def _chunk_matches_topic(chunk, topic_name):
     if not topic_name:
         return True
@@ -292,19 +416,26 @@ def retrieve_relevant_chunks(query, top_k=5):
     keyword_only_chunks = _keyword_chunks(query, limit=max(top_k, 10))
     detected_scheme = detect_scheme(query)
     detected_topic = detect_topic(query)
+    scheme_priority_chunks = _scheme_topic_priority_chunks(
+        detected_scheme,
+        detected_topic,
+        limit=max(top_k, 8),
+    )
 
     try:
         vector_store = get_vector_store()
         vector_count = vector_store.count()
         if vector_count == 0:
-            hybrid_chunks = keyword_only_chunks
+            hybrid_chunks = _dedupe_chunks(scheme_priority_chunks + keyword_only_chunks)
         else:
             query_embedding = embed_query(query)
             candidate_count = max(top_k, min(max(top_k * 10, 50), vector_count))
             chunks = vector_store.search(query_embedding, top_k=candidate_count)
-            hybrid_chunks = _dedupe_chunks(chunks + keyword_only_chunks)
+            hybrid_chunks = _dedupe_chunks(
+                scheme_priority_chunks + chunks + keyword_only_chunks
+            )
     except Exception:
-            hybrid_chunks = keyword_only_chunks
+            hybrid_chunks = _dedupe_chunks(scheme_priority_chunks + keyword_only_chunks)
     
     reranked_chunks = _rerank_chunks(query, hybrid_chunks)
 
@@ -319,6 +450,9 @@ def retrieve_relevant_chunks(query, top_k=5):
         topic_chunks = [chunk for chunk in reranked_chunks if _chunk_matches_topic(chunk, detected_topic)]
         if topic_chunks:
             reranked_chunks = topic_chunks
+
+    if detected_scheme and detected_topic == "exit load":
+        reranked_chunks = _prefer_explicit_exit_load_chunks(reranked_chunks, top_k=top_k)
 
     if _is_generic_topic_query(query, detected_scheme=detected_scheme, detected_topic=detected_topic):
         reranked_chunks = _prefer_explicit_topic_chunks(reranked_chunks, detected_topic, top_k=top_k)

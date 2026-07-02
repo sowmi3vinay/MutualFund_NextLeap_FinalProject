@@ -30,9 +30,106 @@ def limit_to_three_sentences(text):
     return " ".join(sentence for sentence in sentences[:3] if sentence).strip()
 
 
+def _extract_structured_answer(question, context):
+    lowered_question = question.lower()
+    flattened_context = " ".join(context.split())
+
+    if "exit load" in lowered_question:
+        nil_match = re.search(
+            r"(?:exit\s+load[^.:\n]{0,80}[:\-]?\s*)(nil|none|not\s+applicable|no\s+exit\s+load)",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if nil_match:
+            return "The exit load is Nil."
+
+        percent_match = re.search(
+            r"exit\s+load[^.:\n]{0,120}?(?:of\s+)?(\d+(?:\.\d+)?)%\s+is\s+payable\s+if\s+units?\s+are\s+redeemed/?\s*switched-out\s+within\s+([^.]*)",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if percent_match:
+            percent = percent_match.group(1)
+            condition = percent_match.group(2).strip(" .;,:")
+            condition = re.sub(r"\s+", " ", condition)
+            return f"The exit load is {percent}% if units are redeemed or switched out within {condition}."
+
+        load_structure_match = re.search(
+            r"load\s+structure\s+exit\s+load[:\-]?\s*(.*?)\s*(?:no\s+entry\s+load|$)",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if load_structure_match:
+            clause = re.sub(r"\s+", " ", load_structure_match.group(1)).strip(" .;,:")
+            if clause:
+                return f"The exit load is {clause}."
+
+    if "riskometer" in lowered_question or re.search(r"\brisk\b", lowered_question):
+        for risk_level in [
+            "very high",
+            "moderately high",
+            "low to moderate",
+            "moderate",
+            "low",
+        ]:
+            if risk_level in flattened_context.lower():
+                return f"The scheme riskometer for this fund is {risk_level.title()}."
+
+        if "for latest riskometer" in flattened_context.lower():
+            return INSUFFICIENT_CONTEXT_ANSWER
+
+    if "benchmark" in lowered_question:
+        benchmark_match = re.search(
+            r"(nifty\s+[a-z0-9\s&/-]+?index\s*\(tri\))",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if benchmark_match:
+            benchmark = re.sub(r"\s+", " ", benchmark_match.group(1)).strip()
+            return f"The benchmark is {benchmark}."
+
+        benchmark_match = re.search(
+            r"benchmark[^.:\n]{0,80}[:\-]?\s*(nifty\s+[a-z0-9\s&/-]+)",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if benchmark_match:
+            benchmark = re.sub(r"\s+", " ", benchmark_match.group(1)).strip(" .;,:")
+            return f"The benchmark is {benchmark}."
+
+    if "expense ratio" in lowered_question or lowered_question.startswith("what is the ter"):
+        regular_match = re.search(
+            r"regular\s+plan\s*:\s*(\d+(?:\.\d+)?)%\s*p\.a\.",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        direct_match = re.search(
+            r"direct\s+plan\s*:\s*(\d+(?:\.\d+)?)%\s*p\.a\.",
+            flattened_context,
+            flags=re.IGNORECASE,
+        )
+        if regular_match and direct_match:
+            return (
+                "The retrieved documents list actual expenses for the previous financial year ended "
+                f"March 31, 2025 as Regular Plan: {regular_match.group(1)}% p.a. and Direct Plan: {direct_match.group(1)}% p.a."
+            )
+
+        if "total expense ratio" in flattened_context.lower() or "ter" in flattened_context.lower():
+            return (
+                "The retrieved documents point to the AMC TER disclosure page for the current expense ratio, "
+                "but do not provide a single current TER figure in the retrieved text."
+            )
+
+    return None
+
+
 def generate_grounded_answer(question, context):
     if not context.strip():
         return INSUFFICIENT_CONTEXT_ANSWER
+
+    structured_answer = _extract_structured_answer(question, context)
+    if structured_answer:
+        return structured_answer
 
     client = get_groq_client()
     if client is None:
@@ -71,6 +168,10 @@ def generate_grounded_answer(question, context):
 
 
 def generate_extractive_answer(question, context):
+    structured_answer = _extract_structured_answer(question, context)
+    if structured_answer:
+        return structured_answer
+
     lowered_question = question.lower()
     flattened_context = " ".join(context.split())
 
@@ -92,6 +193,7 @@ def generate_extractive_answer(question, context):
         if risk_match:
             risk_level = risk_match.group(1).title()
             return f"The scheme riskometer for this fund is {risk_level}."
+        return INSUFFICIENT_CONTEXT_ANSWER
 
     query_terms = {
         term
