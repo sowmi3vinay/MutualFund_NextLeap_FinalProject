@@ -63,7 +63,7 @@ export function askFAQ(question, sessionId, threadId = 'default') {
       thread_id: threadId,
     }),
     retryCount: 0,
-    timeoutMs: 30000,
+    timeoutMs: 45000,
     timeoutMessage: 'The FAQ request took too long. Please try again in a moment.',
   });
 }

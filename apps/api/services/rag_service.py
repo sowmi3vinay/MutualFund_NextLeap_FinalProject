@@ -33,6 +33,10 @@ GENERIC_QUERY_TERMS = {
     "current",
     "latest",
     "its",
+    "explain",
+    "simple",
+    "words",
+    "meaning",
 }
 
 
@@ -79,6 +83,9 @@ def _prefer_explicit_topic_chunks(chunks, topic_name, top_k):
     ]
     if not explicit_matches:
         return chunks[:top_k]
+
+    if _normalized_text(topic_name) in {"expense ratio", "benchmark", "riskometer"}:
+        return _dedupe_chunks(explicit_matches)[:top_k]
 
     ordered = _dedupe_chunks(explicit_matches + chunks)
     return ordered[:top_k]
@@ -424,16 +431,12 @@ def retrieve_relevant_chunks(query, top_k=5):
 
     try:
         vector_store = get_vector_store()
-        vector_count = vector_store.count()
-        if vector_count == 0:
-            hybrid_chunks = _dedupe_chunks(scheme_priority_chunks + keyword_only_chunks)
-        else:
-            query_embedding = embed_query(query)
-            candidate_count = max(top_k, min(max(top_k * 10, 50), vector_count))
-            chunks = vector_store.search(query_embedding, top_k=candidate_count)
-            hybrid_chunks = _dedupe_chunks(
-                scheme_priority_chunks + chunks + keyword_only_chunks
-            )
+        query_embedding = embed_query(query)
+        candidate_count = max(top_k * 10, 50)
+        chunks = vector_store.search(query_embedding, top_k=candidate_count)
+        hybrid_chunks = _dedupe_chunks(
+            scheme_priority_chunks + chunks + keyword_only_chunks
+        )
     except Exception:
             hybrid_chunks = _dedupe_chunks(scheme_priority_chunks + keyword_only_chunks)
     

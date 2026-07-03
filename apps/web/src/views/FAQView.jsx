@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { askFAQ } from '../lib/api.js';
 
-const THREADS_KEY = 'faq_threads';
-const SESSION_KEY = 'faq_session_id';
+const THREADS_KEY = 'faq_threads_v2';
+const SESSION_KEY = 'faq_session_id_v2';
 
 const suggestions = [
   'What is the exit load for HDFC ELSS Tax Saver?',
@@ -67,7 +67,7 @@ export default function FAQView() {
   });
   const [activeThreadId, setActiveThreadId] = useState(() => threads[0]?.id);
   const [question, setQuestion] = useState('');
-  const [status, setStatus] = useState('idle');
+  const [loadingThreadId, setLoadingThreadId] = useState(null);
 
   const activeThread = useMemo(
     () => threads.find((thread) => thread.id === activeThreadId) || threads[0],
@@ -106,11 +106,11 @@ export default function FAQView() {
 
   async function submitQuestion(prompt = question) {
     const text = prompt.trim();
-    if (!text || status === 'loading') {
+    const currentThreadId = activeThread?.id || activeThreadId;
+    if (!text || loadingThreadId === currentThreadId) {
       return;
     }
 
-    const currentThreadId = activeThread?.id || activeThreadId;
     const userMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -123,7 +123,7 @@ export default function FAQView() {
     }));
 
     setQuestion('');
-    setStatus('loading');
+    setLoadingThreadId(currentThreadId);
     try {
       const response = await askFAQ(text, sessionId, currentThreadId);
       const assistantMessage = {
@@ -140,7 +140,6 @@ export default function FAQView() {
         ...thread,
         messages: [...thread.messages, assistantMessage],
       }));
-      setStatus('idle');
     } catch (error) {
       updateThread(currentThreadId, (thread) => ({
         ...thread,
@@ -155,7 +154,10 @@ export default function FAQView() {
           },
         ],
       }));
-      setStatus('error');
+    } finally {
+      setLoadingThreadId((currentLoadingThreadId) =>
+        currentLoadingThreadId === currentThreadId ? null : currentLoadingThreadId
+      );
     }
   }
 
@@ -277,7 +279,7 @@ export default function FAQView() {
             ) : (
               <div className="empty-chat">Start with a suggestion above or type a question below.</div>
             )}
-            {status === 'loading' && <div className="message assistant">Retrieving grounded sources...</div>}
+            {loadingThreadId === activeThread?.id && <div className="message assistant">Retrieving grounded sources...</div>}
           </div>
 
           <form className="chat-composer" onSubmit={handleSubmit}>
@@ -290,7 +292,7 @@ export default function FAQView() {
             />
             <div className="composer-footer">
               <span>Facts-only RAG - citations required - session memory on</span>
-              <button className="send-button" type="submit" disabled={status === 'loading'}>
+              <button className="send-button" type="submit" disabled={loadingThreadId === activeThread?.id}>
                 Send
               </button>
             </div>

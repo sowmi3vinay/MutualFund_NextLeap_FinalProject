@@ -1,4 +1,5 @@
 import os
+import threading
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -38,6 +39,23 @@ app.include_router(faq.router, prefix="/faq", tags=["FAQ"])
 app.include_router(pulse.router, prefix="/pulse", tags=["Weekly Pulse"])
 app.include_router(scheduler.router, prefix="/scheduler", tags=["Scheduler"])
 app.include_router(approvals.router, prefix="/approvals", tags=["Approvals"])
+
+
+def _warm_faq_dependencies():
+    try:
+        from services.embedding_service import get_embedding_model
+        from services.vector_store import get_vector_store
+
+        get_embedding_model()
+        get_vector_store()
+    except Exception:
+        # Warm-up should never block the API from starting.
+        return
+
+
+@app.on_event("startup")
+def startup_warmup():
+    threading.Thread(target=_warm_faq_dependencies, daemon=True).start()
 
 
 @app.get("/health")

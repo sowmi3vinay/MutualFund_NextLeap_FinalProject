@@ -98,6 +98,25 @@ def _extract_structured_answer(question, context):
             return f"The benchmark is {benchmark}."
 
     if "expense ratio" in lowered_question or lowered_question.startswith("what is the ter"):
+        if any(
+            phrase in lowered_question
+            for phrase in ["explain", "simple words", "simple terms", "what does", "meaning of"]
+        ):
+            if (
+                "total expense ratio" in flattened_context.lower()
+                and "daily net assets" in flattened_context.lower()
+                and (
+                    "operating expenses" in flattened_context.lower()
+                    or "running and managing a mutual fund scheme" in flattened_context.lower()
+                    or "collectively referred to" in flattened_context.lower()
+                )
+            ):
+                return (
+                    "Expense ratio means the ongoing costs charged to run a mutual fund scheme. "
+                    "These costs are collected as a percentage of the scheme's assets and are together called the Total Expense Ratio, or TER. "
+                    "A higher expense ratio reduces the fund's NAV slightly because expenses are deducted from the scheme."
+                )
+
         regular_match = re.search(
             r"regular\s+plan\s*:\s*(\d+(?:\.\d+)?)%\s*p\.a\.",
             flattened_context,
